@@ -1,0 +1,68 @@
+version: "3.9"
+services:
+  mariadb:
+    env_file: .env
+    container_name: mariadb
+    build:
+      context: ./requirements/mariadb
+      dockerfile: Dockerfile
+      args:
+        - MYSQL_DATABASE_NAME=${MYSQL_DATABASE_NAME}
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    networks:
+      - wordpress_website
+    volumes:
+      - mariadb:/var/lib/mysql 
+  nginx:
+    env_file: .env
+    container_name: nginx
+    ports:
+      - "443:443"
+    build: ./requirements/nginx
+    restart: unless-stopped
+    networks:
+      - wordpress_website
+    depends_on:
+      - wordpress
+    volumes:
+      - "wordpress:/var/www/html"
+
+  wordpress:
+    env_file: .env
+    container_name: wordpress
+    restart: unless-stopped
+    build:
+      context: ./requirements/wordpress
+      args:
+        - DOMAIN_NAME=${DOMAIN_NAME}
+        - MYSQL_DATABASE_NAME=${MYSQL_DATABASE_NAME}
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    networks:
+      - wordpress_website
+    volumes:
+      - "wordpress:/var/www/html"
+    depends_on:
+      - mariadb
+
+networks:
+  wordpress_website:
+    name: wordpress_website
+    driver: bridge
+
+volumes:
+  wordpress:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/hetya/data/wordpress
+      o: bind
+  mariadb:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/hetya/data/mariadb
+      o: bind
